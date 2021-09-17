@@ -71,3 +71,22 @@ FROM
 	on m.away_team_api_id = b.api_id 
 where (rm.long_name = 'Real Madrid CF' and b.long_name = 'FC Barcelona') 
 	or (b.long_name = 'Real Madrid CF' and rm.long_name = 'FC Barcelona')
+	
+5. Напишите запрос, который объединит в себе все почтовые индексы водителей и их телефоны в единый столбец-справочник. 
+Также добавьте столбец с именем водителя и столбец с типом контакта (phone или zip в зависимости от типа).
+Отсортируйте список по столбцу с контактными данными в порядке возрастания, а затем — по имени водителя.
+
+select 
+	zip_code::text,
+	first_name,
+	'zip'
+from 
+	driver
+union all
+select
+	phone,
+	first_name,
+	'phone'
+from 
+	driver
+order by 1, 2
