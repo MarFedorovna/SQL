@@ -115,3 +115,40 @@ FROM
 group by 1
 having count(ship_id) <= 10
 order by 2 desc, 1
+
+7. Выведите города с максимальным и минимальным весом единичной доставки.
+
+SELECT
+	c.city_name,
+	s.weight
+FROM
+    city as c join shipment as s
+	on c.city_id = s.city_id
+where s.weight = (select min(s.weight) from shipment as s)
+union all
+SELECT
+	c.city_name,
+	s.weight
+FROM
+    city as c join shipment as s
+	on c.city_id = s.city_id
+where s.weight = (select max(s.weight) from shipment as s)
+order by 2 desc
+
+8. Посчитайте среднее количество товаров в чеке за каждый день.
+Отсортируйте запрос по столбцу с датой.
+
+select 
+	tr_date,
+	avg(su)
+from (select
+	tr_date,
+	tr_id,
+	sum(quantity) as su
+from sql.coffeeshop_sales as s
+group by 1,2
+) s
+group by 1
+order by 1
+
+
