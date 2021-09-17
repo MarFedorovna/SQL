@@ -90,3 +90,28 @@ select
 from 
 	driver
 order by 1, 2
+
+6. Напишите запрос, который выводит два столбца: city_name и shippings_fake. Выведите города, куда совершались доставки.
+Пусть первый столбец содержит название города, а второй формируется так:
+если в городе было более десяти доставок, вывести количество доставок в этот город как есть;
+иначе — вывести количество доставок, увеличенное на пять.
+Отсортируйте по убыванию получившегося «нечестного» количества доставок, а затем — по имени в алфавитном порядке.
+
+SELECT
+	city_name,
+	count(ship_id) as shippings_fake
+FROM
+    city as c join shipment as s
+	on c.city_id = s.city_id
+group by 1
+having count(ship_id) > 10
+union all
+SELECT
+	city_name,
+	count(ship_id)+5 as shippings_fake
+FROM
+    city as c join shipment as s
+	on c.city_id = s.city_id
+group by 1
+having count(ship_id) <= 10
+order by 2 desc, 1
