@@ -151,4 +151,126 @@ group by 1,2
 group by 1
 order by 1
 
+9. Выведите данные по средней сумме чека за каждый день.
+Отсортируйте запрос по столбцу с датой.
 
+SELECT
+	tr_date,
+	AVG (daily_revenue) avg_rev_daily
+FROM 
+(
+SELECT
+	cs.tr_id,
+	cs.tr_date,
+	SUM(cs.quantity * cp.price) daily_revenue
+FROM 
+	sql.coffeeshop_sales cs
+	JOIN sql.coffeeshop_products cp ON cs.product_id = cp.product_id
+GROUP BY 1,2
+) avg_revenue_by_day
+GROUP BY 1
+ORDER BY 1
+
+10. Для товарного исследования необходимо предоставить данные о сумме продаж по напиткам (Drinks) 
+и выпечке (Foods) в формате: категория продукта, выручка.
+Напишите запрос для вывода необходимых данных, отсортируйте результат по сумме в порядке убывания.
+Напитки: product_type содержит chocolate / barista / brewed / drip / drink / syrup.
+Выпечка: product_type содержит pastry / scone / biscotti.
+
+WITH product_type AS 
+(
+SELECT
+	'Drinks' new_category, 
+	cp.product_id,
+	cp.price
+FROM 
+	sql.coffeeshop_products cp
+WHERE
+	cp.product_type ILIKE '%chocolate%'
+	OR cp.product_type ILIKE '%barista%'
+	OR cp.product_type ILIKE '%brewed%'
+	OR cp.product_type ILIKE '%drip%'
+	OR cp.product_type ILIKE '%drink%'
+	OR cp.product_type ILIKE '%syrup%'
+UNION ALL
+SELECT 
+	'Foods' new_category,
+	cp.product_id,
+	cp.price
+FROM
+	sql.coffeeshop_products cp 
+WHERE
+	cp.product_type ILIKE '%pastry%'
+	OR cp.product_type ILIKE '%scone%'
+	OR cp.product_type ILIKE '%biscotti%')
+SELECT
+	pt.new_category,
+	SUM(cs.quantity * pt.price)
+FROM
+	sql.coffeeshop_sales cs
+	JOIN product_type pt ON cs.product_id = pt.product_id
+GROUP BY 1
+order by 2 desc
+
+11. Для анализа портрета покупателя необходимо предоставить данные по клиентам, 
+которые сначала совершили покупку онлайн, а потом пришли в кафе лично. Формате вывода:
+номер клиента, имя клиента.
+Отсортируйте запрос по id пользователя в порядке возрастания.
+
+SELECT
+    DISTINCT
+    cc.cust_id,
+    cc.cust_name
+FROM
+    (SELECT
+        cs.cust_id,
+        MIN(cs.tr_date) online_date
+    FROM
+        sql.coffeeshop_sales cs
+    WHERE
+        instore_flg = 'N'
+    GROUP BY 1
+    ) online
+    JOIN sql.coffeeshop_sales cs ON cs.cust_id = online.cust_id
+    JOIN sql.coffeeshop_custs cc ON online.cust_id = cc.cust_id
+WHERE
+    cs.instore_flg = 'Y'
+    AND online.online_date < cs.tr_date
+ORDER BY 1
+
+12. Напишите запрос, который выведет год, месяц и количество доставок.
+Отсортируйте по году и по месяцу в порядке возрастания.
+Столбцы в выдаче: year_n (номер года), month_n (номер месяца), qty (количество доставок).
+
+SELECT 
+	EXTRACT(YEAR FROM ship_date) as year_n,
+	EXTRACT(MONTH FROM ship_date) as month_n,
+	COUNT(ship_id)
+from shipment
+group by 1,2
+order by 1,2 
+
+13. Напишите запрос, который выведет дату доставки, округлённую до квартала, и общую массу доставок.
+Отсортируйте по кварталу в порядке возрастания.
+Столбцы в выдаче: q (начало квартала, тип date), total_weight (сумма масс доставок за квартал)
+
+select
+	date_trunc('quarter', ship_date)::date as q,
+	sum(weight) as total_weight 
+from
+	shipment
+group by 1
+order by 1
+
+14. Напишите запрос, который выведет разницу между последним и первым днём доставки по каждому городу.
+Отсортируйте по первому и второму столбцам.
+Столбцы в выдаче: city_name (название города) и days_active (время от первой до последней доставки в днях).
+
+select
+	city_name,
+	max(ship_date)- min(ship_date) as days_active
+from
+	city as c join shipment as s
+	on c.city_id = s.city_id
+group by 1
+order by 1,2
