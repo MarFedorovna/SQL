@@ -274,3 +274,101 @@ from
 	on c.city_id = s.city_id
 group by 1
 order by 1,2
+
+14. Напишите запрос с помощью операторов CASE, который для вышеприведённых случаев заменяет 
+частные названия на общие (Sony Entertainment и Idea Factory). 
+Во второй колонке выведите сумму всех продаж с учётом изменений.
+
+SELECT
+    CASE WHEN publisher ilike '%Sony%Entertainment%' THEN 'Sony Entertainment' 
+         when publisher ilike '%Idea%Factory%' THEN 'Idea Factory'
+		 else publisher
+		 END publishers, 
+    sum(global_sales) as sales
+FROM sql.vgsales 
+GROUP BY 1 
+order by 2 desc
+
+15. Напишите запрос, который выведет NULL для отсутствующих значений в столбце с издательствами (publisher=’N/A’).
+Колонки к выводу — game_name, publisher.
+Отсортируйте по названию игр в алфавитном порядке.
+
+SELECT 
+    game_name,
+    NULLIF(publisher, 'N/A') as publisher
+FROM sql.vgsales
+order by 1
+
+16. Напишите запрос, который выведет название города и имя клиента, если он там проживает, в противном случае — название города и фразу ‘нет клиента’.
+Столбцы к выводу — city_name, client.
+Отсортируйте по названию города в алфавитном порядке.
+
+SELECT 
+    c.city_name,
+    COALESCE(cu.cust_name, 'нет клиента') as client
+FROM sql.city c
+LEFT JOIN sql.customer cu ON c.city_id=cu.city_id
+ORDER BY 1
+
+17. На основе таблиц sql.shipment и sql.city напишите код, который посчитает средний по штату вес доставляемого груза.
+Используя его как CTE, выведите:
+название штата, категорию доставок, где масса больше ('more'), меньше ('less'), 
+равна ('equal') средней по штату массе посылок или не указана ('no_value'),
+а также количество таких доставок.
+Штаты без доставок выводить не нужно.
+Столбцы в выдаче — state (название штата), category (категория доставок; текстовый столбец, содержащий значения 'more', 'less', 'equal', 'no_value'), qty (количество доставок).
+Отсортируйте по первому и второму столбцам.
+
+with sr as 
+(select
+	c.state,
+	avg(s.weight) as avg_weight
+from
+	city as c join shipment as s
+	on c.city_id = s.city_id
+group by 1)
+select
+    sr.state,
+        case
+            when b.weight>sr.avg_weight then 'more'
+            when b.weight<sr.avg_weight then 'less'
+            when b.weight=sr.avg_weight then 'equal'
+            else 'no_value'
+         end
+             category, 
+             count(b.ship_id) qty
+from sr join
+    (
+        select
+            c.state,
+            s.ship_id,
+            s.weight
+         from shipping.city c
+             join shipping.shipment s
+                 on s.city_id=c.city_id
+          ) b
+on sr.state=b.state
+group by 1,2
+order by 1,2
+
+18. Используя таблицу sql.vgsales, выведите название игры, платформу и регион, в котором продажи были наиболее успешными:
+
+'na_sales' — если продаж больше всего было в Северной Америке;
+'eu_sales’ — если продаж больше всего было в Европе;
+'jp_sales’ — если продаж больше всего в Японии;
+'other_sales’ — если продаж больше всего в других регионах;
+'several_regions’ — если максимальное значение продаж сразу в нескольких регионах.
+Колонки к выводу — game_name, platform, biggest_sales_region.
+Отсортируйте по названию игры в алфавитном порядке.
+
+SELECT
+    game_name,
+	platform,
+	CASE WHEN na_sales > eu_sales and na_sales > jp_sales and na_sales > other_sales THEN 'na_sales'
+	     WHEN eu_sales > na_sales and eu_sales > jp_sales and eu_sales > other_sales THEN 'eu_sales'
+		 WHEN jp_sales > na_sales and jp_sales > eu_sales and jp_sales > other_sales THEN 'jp_sales'
+		 WHEN other_sales > na_sales and other_sales > eu_sales and other_sales > jp_sales THEN 'other_sales'
+		 ELSE 'several_regions'
+	END biggest_sales_region
+FROM sql.vgsales
+ORDER BY 1
