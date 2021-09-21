@@ -372,3 +372,90 @@ SELECT
 	END biggest_sales_region
 FROM sql.vgsales
 ORDER BY 1
+
+19. Напишите запрос, который выберет имя (name) третьего по атаке покемона. Ранжируем покемонов, начиная с самого сильного.
+
+with s as 
+(SELECT
+	name,
+	attack,
+	ROW_NUMBER() OVER(
+    ORDER BY 
+      attack desc
+  ) row_number
+from
+	sql.pokemon)
+SELECT
+	name
+from
+	s
+where s.row_number = 3
+
+20. В бой идут только покемоны типа 'Dark'. Необходимо вывести:
+имя покемона,
+его скорость,
+значение true, если скорость предыдущего покемона равна скорости текущего,
+и false, если не равна, в колонке is_equal.
+
+select
+	name,
+	speed,
+	CASE
+		WHEN speed=(LAG(speed) OVER(
+		ORDER BY speed)) then true
+		ELSE false 
+		END is_equal
+from
+	sql.pokemon
+where
+	type1='Dark'
+
+21. Необходимо вывести:
+type1,
+name (имя покемона),
+speed (его скорость),
+delta (показатель, насколько его скорость отличается от максимальной скорости покемона его же типа1: MAX(speed) - speed).
+При этом не учитываются покемоны с показателем здоровья (hp) 50 и меньше.
+
+SELECT 
+  type1, 
+  name, 
+  speed, 
+  MAX(speed) FILTER (
+    WHERE 
+      hp > 50
+  )  over(PARTITION BY type1)-speed "delta"
+FROM 
+  sql.pokemon 
+  
+22. Напишите запрос, чтобы выбрать три самых недорогих товара в каждой категории. Отсортируйте по цене внутри категории.
+Столбцы к выводу — product_type (категория товара), product (товар), price (цена), rnk (ранг).
+
+select
+    product_type,
+    product,
+    price,
+    rnk
+from
+	(select
+		product_type,
+		product,
+		price,
+		dense_rank() over(partition by product_type order by price) rnk
+from
+    sql.coffeeshop_products) ad_table
+where
+	rnk<=3
+	
+23. Мы ищем самые дорогие товары по категориям.
+Необходимо выбрать среднюю цену товара в категории (не учитывая товары дешевле 3), 
+а также показать, насколько данный товар дешевле самого дорогого товара в категории.
+
+SELECT 
+  product_type, 
+  product, 
+  price, 
+  AVG(price) FILTER(WHERE price >= 3) OVER (PARTITION BY product_type) AS avg_price, 
+  MAX(price) OVER (PARTITION BY product_type) - price AS delta_price 
+FROM 
+  sql.coffeeshop_products p
