@@ -459,3 +459,39 @@ SELECT
   MAX(price) OVER (PARTITION BY product_type) - price AS delta_price 
 FROM 
   sql.coffeeshop_products p
+  
+24. Выведите в итоговой таблице 5 колонок: blogger — имя блогера, post — название поста, likes — количество лайков поста, total_likes — общее количество лайков лучших постов, percent — процент лайков текущего поста относительно общего количества лайков. Процент следует вывести с двумя знаками после десятичной точки.
+
+Итоговые данные отсортируйте по популярности постов: чем популярней — тем выше.
+
+with s as 
+(
+select
+    rank() over (partition by blogger order by likes desc) as post_popularity,
+    blogger,
+    post,
+    likes
+from
+    bloggers_posts
+)
+select
+    blogger,
+    post,
+    likes,
+    total_likes,
+    round(likes*100 / total_likes, 2) as percent
+from
+(
+select 
+    blogger,
+    post,
+    likes,
+    sum(likes) over () as total_likes
+from 
+    (select *
+    from s
+    where post_popularity = 1
+    order by blogger, likes desc
+    ) as r
+) as d
+order by likes desc
