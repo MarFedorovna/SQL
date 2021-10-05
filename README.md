@@ -495,3 +495,25 @@ from
     ) as r
 ) as d
 order by likes desc
+
+25. В таблице orders хранится список заказов компании. Напишите запрос, который в первом столбце (year) — выведет год, во втором (user_id) — идентификатор пользователя, в третьем (amount) — сумму выполненных (success) заказов за текущий год для этого пользователя, а в четвертом (percent) — вклад пользователя в процентах в общую сумму доходов в рамках текущего года.
+
+Данные отсортируйте по году и по вкладу пользователя в возрастающем порядке.
+
+select
+    year,
+    user_id,
+    amount,
+    amount * 100 / al as percent
+from 
+(select
+     year(date) as year,
+     user_id,
+     sum(amount) as amount,
+     sum(sum(amount)) over(partition by year(date)) as al
+from
+    orders
+where status = 'success'
+group by 1,2
+) as d
+order by 1, 4
