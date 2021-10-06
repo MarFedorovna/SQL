@@ -517,3 +517,68 @@ where status = 'success'
 group by 1,2
 ) as d
 order by 1, 4
+
+26. Таблицы ниже содержат данные о покупателях и их заказах в различных магазинах сети.
+Напишите SQL запрос, который выведет 5 колонок: name — название магазина, first_name — имя покупателя, last_name — фамилия покупателя, amount — общая сумма выполненных заказов (status="success") покупателя в текущем магазине, c_level — группа (уровень) покупателя.
+Всех покупателей магазин делит на четыре равные группы, нумеруя их от 1 (потратили больше всего) до 4 (потратили меньше всего). При этом для каждого магазина группы считаются по отдельности.
+Итоговые данные отсортируйте по названию магазина, а после по группам в возрастающем порядке.
+
+select
+    d.name,
+    d.first_name,
+    d.last_name,
+    d.amount,
+    ntile(4) over (partition by d.name ORDER BY d.amount desc) as c_level
+from
+(    
+select
+        s.name,
+        u.first_name,
+        u.last_name,
+        sum(o.amount) as amount
+    from
+        shops as s 
+        join orders as o on s.id = o.shop_id
+        join users as u on u.id = o.user_id
+    where 
+        o.status = 'success'
+    group by 1,2,3
+    order by 1, 4
+) as d
+order by 1, 5
+
+27. Теперь нужно получить лучших покупателей всей сети без разбивки по магазинам, но с разбивкой по месяцам. За основу деления на группы берите всё те же 4 сегмента: 1 — самая большая сумма покупок за месяц, 4 — минимальная сумма покупок.
+Напишите SQL запрос, который выведет 4 колонки: month — номер месяца, first_name — имя покупателя, last_name — фамилия покупателя, amount — общая сумма выполненных заказов (status="success") покупателя в текущем месяце. c_level выводить не нужно, так как нам интересны только покупатели из первой группы.
+Итоговые данные отсортируйте по месяцу, а после по сумме заказа в возрастающем порядке.
+
+select
+    c.month,
+    c.first_name,
+    c.last_name,
+    c.amount
+from
+(select
+    d.month,
+    d.first_name,
+    d.last_name,
+    d.amount,
+    ntile(4) over (partition by d.month ORDER BY d.amount desc) as c_level
+from  
+(
+select
+        month(o.date) as month,
+        u.first_name,
+        u.last_name,
+        sum(o.amount) as amount
+    from
+        shops as s 
+        join orders as o on s.id = o.shop_id
+        join users as u on u.id = o.user_id
+    where 
+        o.status = 'success'
+    group by 1,2,3
+    order by 1, 4
+) as d
+) as c
+where c.c_level = 1
+order by 1, 4
